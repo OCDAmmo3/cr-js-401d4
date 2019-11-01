@@ -1,82 +1,61 @@
 import './resty.scss';
 
-import React from 'react';
-import superagent from 'superagent';
+import React, { useState } from 'react';
 import ReactJson from 'react-json-view';
 
-class RESTy extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      url: '',
-      method: 'get',
-      header: {},
-      body: {},
-      history: {},
-      headersVisible: false,
-    };
-  }
+import Form from './form';
+import makeRequest from './api';
 
-  handleChange = event => {
-    let prop = event.target.name;
-    let value = event.target.value;
-    this.setState({ [prop]: value });
+function History(props) {
+  return (
+    <ul>
+      {props.history.map(h => (
+        <li>{h.method.toUpperCase()} {h.url}</li>
+      ))}
+    </ul>
+  )
+}
+
+function RESTy() {
+  let [response, setResponse] = useState({});
+  let [history, setHistory] = useState([]);
+
+  let callAPI = (method, url, body) => {
+    setHistory(h => [
+      {method, url, body},
+      ...h,
+    ]);
+
+    makeRequest(method, url, body)
+      .then(setResponse);
   };
 
-  callAPI = event => {
-    event.preventDefault();
-    superagent('get', this.state.url)
-      .set('Content-Type', 'application/json')
-      .send(this.state.requestBody)
-      .then(response => {
-        let header = response.header;
-        let body = response.body;
-        this.setState({ header, body });
-      })
-      .catch(e => {
-        let body = { error: e.message };
-        let header = {};
-        this.setState({ header, body });
-      });
-  };
-
-  render() {
-    return (
-      <main>
-        <section className="deck">
-          <form onSubmit={this.callAPI}>
-            <section id="url-entry">
-              <input
-                type="text"
-                className="wide"
-                name="url"
-                placeholder="URL"
-                value={this.state.url}
-                onChange={this.handleChange}
-              />
-              <label>
-                <button type="submit">Go!</button>
-              </label>
-            </section>
-          </form>
-          <div id="json">
-            <ReactJson
-              name="Headers"
-              enableClipboard={false}
-              collapsed={true}
-              src={this.state.header}
-            />
-            <ReactJson
-              name="Response"
-              enableClipboard={false}
-              collapsed={false}
-              src={this.state.body}
-            />
-          </div>
-        </section>
-      </main>
-    );
-  }
+  return (
+    <main>
+      <aside>
+        <History history={history} />
+      </aside>
+      <section className="deck">
+        <Form
+          onRequest={callAPI}
+          />
+        <div id="json">
+          <ReactJson
+            name="Headers"
+            enableClipboard={false}
+            collapsed={true}
+            src={response.header}
+          />
+          <ReactJson
+            name="Response"
+            enableClipboard={false}
+            collapsed={false}
+            src={response.body}
+          />
+        </div>
+      </section>
+    </main>
+  );
 }
 
 export default RESTy;
